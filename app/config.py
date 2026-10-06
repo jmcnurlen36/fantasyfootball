@@ -12,8 +12,8 @@ DATA_DIR = os.environ.get("DATA_DIR", "./data")
 REFRESH_HOURS = float(os.environ.get("REFRESH_HOURS", "6"))
 SCHEDULER = os.environ.get("SCHEDULER", "on") == "on"
 
-# Used only if Yahoo's league settings don't report when playoffs start.
-LAST_WEEK_FALLBACK = int(os.environ.get("LAST_REGULAR_SEASON_WEEK", "14"))
+# Used only if Yahoo's league settings don't report the league's last week.
+LAST_WEEK_FALLBACK = int(os.environ.get("LAST_WEEK", "17"))
 
 # First names of managers who are not part of the bet. They stay on the page, greyed out.
 # This is only the starting point: the admin page has a checkbox per manager that overrides it.

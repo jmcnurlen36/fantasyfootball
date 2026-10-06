@@ -47,11 +47,9 @@ def _yahoo(log):
     if not teams:
         raise yahoo.YahooError("Yahoo returned no teams for the league.")
 
-    # Regular season only: stop the week before playoffs start.
-    last_week = (league["playoff_start_week"] - 1 if league["playoff_start_week"]
-                 else config.LAST_WEEK_FALLBACK)
-    if league["end_week"]:
-        last_week = min(last_week, league["end_week"])
+    # Fantasy playoff weeks count too, for every manager, through the league's last week.
+    last_week = league["end_week"] or config.LAST_WEEK_FALLBACK
+    playoff_start = league["playoff_start_week"]
     current = league["current_week"] or league["start_week"]
 
     with db.connect() as con:
@@ -63,6 +61,7 @@ def _yahoo(log):
     db.put("league", {
         "name": league["name"], "season": game["season"], "league_key": league_key,
         "start_week": league["start_week"], "last_week": last_week, "current_week": current,
+        "playoff_start_week": playoff_start,
     })
 
     fetched = 0
@@ -78,7 +77,9 @@ def _yahoo(log):
                     (week, team["team_key"], json.dumps(kickers), final))
             fetched += 1
     log.append(f"Yahoo: {league['name']}, {len(teams)} teams, current week {current}, "
-               f"regular season ends week {last_week}, {fetched} lineups fetched.")
+               f"season ends week {last_week}"
+               + (f" (playoffs from week {playoff_start})" if playoff_start else "")
+               + f", {fetched} lineups fetched.")
 
 
 def _field_goals(log):

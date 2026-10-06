@@ -16,7 +16,7 @@ TEAM_NAMES = ["Sample Team %d" % i for i in range(1, 15)]
 
 
 def main():
-    fgs, _, max_week = nflverse.load_field_goals(2026, 14)
+    fgs, _, max_week = nflverse.load_field_goals(2026, 17)
     seen = {}
     for fg in fgs:
         seen[fg["gsis_id"]] = fg["team"]

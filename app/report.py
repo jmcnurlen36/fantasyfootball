@@ -19,10 +19,13 @@ def build():
         ids = {r["yahoo_id"]: r["gsis_id"] for r in con.execute("SELECT * FROM kicker_ids")}
 
     weeks = range(league["start_week"], league["last_week"] + 1)
+    playoff_start = league.get("playoff_start_week")
     managers = []
     for team in teams:
         rows = [_week(w, starts.get((w, team["team_key"])), best, played, ids, league)
                 for w in weeks]
+        for r in rows:
+            r["playoffs"] = bool(playoff_start and r["week"] >= playoff_start)
         top = max((r for r in rows if r["longest"]), key=lambda r: (r["longest"], -r["week"]),
                   default=None)
         managers.append({
@@ -53,6 +56,7 @@ def build():
     return {
         "league": league["name"], "season": league["season"],
         "first_week": league["start_week"], "last_week": league["last_week"],
+        "playoff_start_week": playoff_start,
         "current_week": league["current_week"],
         "updated": db.get("last_success"),
         "managers": managers,

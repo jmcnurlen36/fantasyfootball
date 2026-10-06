@@ -32,8 +32,8 @@ PBP = [
     "REG,1,BAL,BUF,BUF,,NA,,",
     "REG,2,BAL,CLE,BAL,made,64,T.Loop,00-L",
     "REG,2,DAL,NYG,DAL,made,61,B.Aubrey,00-A",
-    "REG,15,DAL,WAS,DAL,made,70,B.Aubrey,00-A",        # playoffs: ignored
-    "POST,1,DAL,WAS,DAL,made,71,B.Aubrey,00-A",
+    "REG,15,DAL,WAS,DAL,made,70,B.Aubrey,00-A",        # fantasy playoffs: counts
+    "POST,1,DAL,WAS,DAL,made,71,B.Aubrey,00-A",       # NFL postseason: ignored
 ]
 
 TEAMS = [
@@ -73,7 +73,8 @@ def test_refresh_and_report(app_data):
     result = refresh.run()
     assert result["ok"], result["log"]
     rep = report.build()
-    assert (rep["first_week"], rep["last_week"]) == (1, 14)      # playoffs start week 15
+    assert (rep["first_week"], rep["last_week"]) == (1, 17)      # through the fantasy playoffs
+    assert rep["playoff_start_week"] == 15
     teams = by_team(rep)
 
     golden = teams["Golden"]
@@ -81,7 +82,7 @@ def test_refresh_and_report(app_data):
     assert golden["weeks"][1]["longest"] == 61
     assert golden["weeks"][2]["status"] == "pending"             # week 3 has no games yet
     assert golden["weeks"][3]["status"] == "upcoming"
-    assert len(golden["weeks"]) == 14
+    assert len(golden["weeks"]) == 17
 
     leg = teams["Leg Day"]                                       # matched through the stats id
     assert (leg["longest"], leg["week"]) == (64, 2)
@@ -119,6 +120,18 @@ def test_ties_share_a_rank(app_data, monkeypatch):
     refresh.run()
     teams = by_team(report.build())
     assert teams["Golden"]["rank"] == teams["Leg Day"]["rank"] == 1
+
+
+def test_fantasy_playoff_weeks_count_for_everyone(app_data):
+    app_data.current_week = 16
+    db.put("out_of_bet", [])
+    refresh.run()
+    teams = by_team(report.build())
+    golden = teams["Golden"]
+    assert (golden["longest"], golden["week"]) == (70, 15)       # the NFL postseason 71 does not count
+    assert [w["playoffs"] for w in golden["weeks"][13:15]] == [False, True]
+    assert golden["weeks"][15]["status"] == "pending"
+    assert golden["rank"] == 1
 
 
 def test_finished_weeks_are_fetched_once(app_data):

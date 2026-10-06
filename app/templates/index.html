@@ -69,6 +69,8 @@
   .status { color: var(--muted); }
   tr.best td { background: #FFF6D6; }
   tr.later td { color: var(--out); }
+  tr.split td { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+                color: var(--muted); padding-top: 18px; }
   .empty { background: var(--chalk); padding: 28px; margin-top: 32px; border-left: 5px solid var(--upright); }
   footer { color: var(--muted); font-size: 14px; margin: 36px 0 48px; }
   footer a { color: inherit; }
@@ -85,7 +87,7 @@
   <div class="wrap">
     <h1>Kicker Bet</h1>
     {% if report %}
-    <p>{{ report.league }}, {{ report.season }} regular season, weeks {{ report.first_week }} to {{ report.last_week }}</p>
+    <p>{{ report.league }}, {{ report.season }} season, weeks {{ report.first_week }} to {{ report.last_week }}{% if report.playoff_start_week %}, including the fantasy playoffs from week {{ report.playoff_start_week }}{% endif %}</p>
     {% endif %}
   </div>
   <div class="hash"></div>
@@ -195,6 +197,10 @@ function showDetail() {
   const m = REPORT.managers.find(x => x.id === select.value); if (!m) return;
   dBody.replaceChildren();
   for (const w of m.weeks) {
+    if (w.playoffs && w.week === REPORT.playoff_start_week) {
+      const tr = el("tr", "split"); const td = el("td", "", "Fantasy playoffs"); td.colSpan = 3;
+      tr.append(td); dBody.append(tr);
+    }
     const tr = el("tr", w.status === "upcoming" ? "later" : (w.longest && w.week === m.week ? "best" : ""));
     tr.append(el("td", "wk num", w.week));
     tr.append(el("td", "", w.kicker ?? (w.status === "upcoming" ? "" : "–")));
