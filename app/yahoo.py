@@ -15,6 +15,9 @@ AUTH_URL = "https://api.login.yahoo.com/oauth2/request_auth"
 TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token"
 API = "https://fantasysports.yahooapis.com/fantasy/v2"
 TIMEOUT = 30
+# Fantasy Sports, read only. Asking for it by name makes Yahoo's consent page show it,
+# and makes Yahoo refuse there (not later with a 403) if the developer app lacks it.
+SCOPE = "fspt-r"
 
 
 class YahooError(Exception):
@@ -28,6 +31,7 @@ def authorize_url():
         "client_id": config.CLIENT_ID,
         "redirect_uri": config.REDIRECT_URI,
         "response_type": "code",
+        "scope": SCOPE,
     })
 
 
@@ -58,6 +62,8 @@ def _token_request(data):
         # Keep whatever refresh token Yahoo sends back, in case it rotates them.
         "refresh_token": body.get("refresh_token") or old.get("refresh_token"),
         "expires_at": time.time() + int(body.get("expires_in", 3600)) - 120,
+        # Tokens only work with the Yahoo app that issued them; see _saved_tokens.
+        "client_id": config.CLIENT_ID,
     }
     db.put("yahoo_tokens", tokens)
     return tokens
@@ -67,14 +73,27 @@ def exchange_code(code):
     return _token_request({"grant_type": "authorization_code", "code": code})
 
 
+def _saved_tokens():
+    """The saved tokens, or None if there are none or they came from a different Yahoo app.
+
+    After YAHOO_CLIENT_ID changes, the old access token would keep being sent until it
+    expired, so a sign-in made under the old keys must not count as connected.
+    """
+    tokens = db.get("yahoo_tokens") or {}
+    if not tokens.get("refresh_token") or tokens.get("client_id") != config.CLIENT_ID:
+        return None
+    return tokens
+
+
 def is_connected():
-    return bool((db.get("yahoo_tokens") or {}).get("refresh_token"))
+    return _saved_tokens() is not None
 
 
 def _access_token(force=False):
-    tokens = db.get("yahoo_tokens")
-    if not tokens or not tokens.get("refresh_token"):
-        raise YahooError("Yahoo is not connected yet. Use the admin page to sign in.")
+    tokens = _saved_tokens()
+    if not tokens:
+        raise YahooError("Yahoo is not connected with the current Yahoo keys. "
+                         "Use the admin page to sign in.")
     if force or time.time() >= tokens["expires_at"]:
         tokens = _token_request(
             {"grant_type": "refresh_token", "refresh_token": tokens["refresh_token"]})
@@ -91,6 +110,11 @@ def get(path):
         r = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=TIMEOUT)
         if r.status_code == 401 and attempt == 1:
             continue
+        if r.status_code == 403 and "not authorized" in r.text:
+            raise YahooError(
+                f"Yahoo returned 403 for {path}: this Yahoo app is not allowed to read "
+                "Fantasy Sports. In the Yahoo developer app, tick Fantasy Sports > Read, "
+                "then connect Yahoo again on this page.")
         if r.status_code != 200:
             raise YahooError(f"Yahoo returned {r.status_code} for {path}: {r.text[:300]}")
         return parse_xml(r.text)

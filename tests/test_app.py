@@ -147,6 +147,26 @@ def test_code_from_paste():
     assert yahoo.code_from_paste("https://localhost:8080/?code=xyz9&state=") == "xyz9"
 
 
+def test_sign_in_asks_for_fantasy_scope(monkeypatch):
+    monkeypatch.setattr(config, "CLIENT_ID", "new-app")
+    assert "scope=fspt-r" in yahoo.authorize_url()
+
+
+def test_sign_in_from_other_yahoo_app_is_not_connected(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(config, "CLIENT_ID", "new-app")
+    db.put("yahoo_tokens", {"access_token": "a", "refresh_token": "r", "expires_at": 9e9})
+    assert not yahoo.is_connected()                  # saved before tokens recorded their app
+    db.put("yahoo_tokens", {"access_token": "a", "refresh_token": "r", "expires_at": 9e9,
+                            "client_id": "old-app"})
+    assert not yahoo.is_connected()
+    with pytest.raises(yahoo.YahooError, match="current Yahoo keys"):
+        yahoo.get("game/nfl")
+    db.put("yahoo_tokens", {"access_token": "a", "refresh_token": "r", "expires_at": 9e9,
+                            "client_id": "new-app"})
+    assert yahoo.is_connected()
+
+
 def test_name_matching_is_exact_and_unambiguous():
     rows = ID_ROWS + [{"gsis_id": "00-Z", "yahoo_id": "NA", "stats_id": "NA", "position": "PK",
                        "name": "Tyler Bass", "merge_name": "tyler bass"}]
