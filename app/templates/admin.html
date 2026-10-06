@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kicker Bet admin</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; color: #10231A; background: #F2F5F0; margin: 0; }
+  main { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { margin: 0 0 4px; } h2 { margin: 32px 0 8px; font-size: 20px; }
+  section { background: #fff; padding: 16px 20px; border: 1px solid #C7D3CA; margin-top: 16px; }
+  section h2 { margin-top: 0; }
+  input[type=text] { width: 100%; padding: 8px; font: inherit; border: 1.5px solid #10231A; border-radius: 4px; }
+  button { font: inherit; font-weight: 600; padding: 8px 14px; margin-top: 10px; background: #17603D;
+    color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+  .msg { background: #FFF6D6; border-left: 5px solid #F6C21C; padding: 10px 14px; margin-top: 16px; }
+  .ok { color: #17603D; font-weight: 600; } .bad { color: #A12B1B; font-weight: 600; }
+  code { background: #EEF2EE; padding: 1px 5px; border-radius: 3px; word-break: break-all; }
+  ol { padding-left: 20px; } li { margin-bottom: 6px; }
+  label.row { display: block; padding: 3px 0; }
+  ul.log { padding-left: 18px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kicker Bet admin</h1>
+  <a href="/">Back to the report</a>
+  {% if message %}<div class="msg">{{ message }}</div>{% endif %}
+
+  <section>
+    <h2>Yahoo connection</h2>
+    {% if connected %}
+      <p class="ok">Connected.</p>
+      <p>You only need to repeat the steps below if refreshes start failing with a sign-in error.</p>
+    {% else %}
+      <p class="bad">Not connected yet.</p>
+    {% endif %}
+    {% if not has_keys %}
+      <p class="bad">YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET are not set, so sign-in cannot start.</p>
+    {% else %}
+    <ol>
+      <li><a href="{{ authorize_url }}" target="_blank" rel="noopener">Open Yahoo and click Agree</a>.</li>
+      <li>Yahoo sends the browser to <code>{{ redirect_uri }}</code>, which shows a "can't connect" error. That is expected.</li>
+      <li>Copy the whole address from that tab's address bar and paste it here within a few minutes.</li>
+    </ol>
+    <form method="post" action="/admin/connect">
+      <input type="text" name="code" placeholder="{{ redirect_uri }}/?code=..." autocomplete="off">
+      <button type="submit">Connect Yahoo</button>
+    </form>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Refresh</h2>
+    <p>Runs automatically every {{ hours|round(1) }} hours.
+      {% if running %}<strong>A refresh is running now.</strong>{% endif %}</p>
+    {% if last %}
+      <p>Last refresh: <span class="{{ 'ok' if last.ok else 'bad' }}">{{ 'succeeded' if last.ok else 'had errors' }}</span>
+        at {{ last.at }} (UTC)</p>
+      <ul class="log">{% for line in last.log %}<li>{{ line }}</li>{% endfor %}</ul>
+    {% else %}
+      <p>No refresh has run yet.</p>
+    {% endif %}
+    {% if unmatched %}
+      <p class="bad">Kickers not matched to NFL data: {{ unmatched|join(', ') }}. Their weeks show as not matched on the report.</p>
+    {% endif %}
+    <form method="post" action="/admin/refresh"><button type="submit">Refresh now</button></form>
+  </section>
+
+  <section>
+    <h2>Who is in the bet</h2>
+    {% if teams %}
+    <p>Unticked managers stay on the report, greyed out and unranked.</p>
+    <form method="post" action="/admin/bet">
+      {% for t in teams %}
+      <label class="row"><input type="checkbox" name="in_bet" value="{{ t.team_key }}" {{ 'checked' if t.in_bet }}>
+        {{ t.name }}{% if t.manager %} ({{ t.manager }}){% endif %}</label>
+      {% endfor %}
+      <button type="submit">Save</button>
+    </form>
+    {% else %}
+    <p>The manager list appears here after the first refresh.</p>
+    {% endif %}
+  </section>
+</main>
+</body>
+</html>

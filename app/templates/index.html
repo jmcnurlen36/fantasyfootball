@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kicker Bet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F2F5F0; --ink: #10231A; --turf: #17603D; --turf-soft: #D5E5DA;
+    --upright: #F6C21C; --muted: #5B6B62; --line: #C7D3CA; --out: #8E9A93; --chalk: #FFFFFF;
+    --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --body: "Barlow", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.45 var(--body); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+
+  /* Header: a strip of turf with the sideline hash marks along its lower edge. */
+  .field { background: var(--turf); color: var(--chalk); padding: 28px 0 0; }
+  .field h1 { font: 700 clamp(44px, 9vw, 76px)/0.95 var(--display); margin: 0; letter-spacing: 0.01em; }
+  .field p { margin: 8px 0 0; color: #D9EADF; }
+  .hash { height: 18px; margin-top: 22px; border-top: 2px solid var(--chalk);
+    background: repeating-linear-gradient(90deg, var(--chalk) 0 2px, transparent 2px 5%) 0 0 / 100% 8px no-repeat; }
+
+  h2 { font: 700 30px/1.1 var(--display); margin: 40px 0 12px; }
+  table { width: 100%; border-collapse: collapse; background: var(--chalk); }
+  th { text-align: left; font: 600 14px/1.2 var(--body); color: var(--muted); padding: 10px 12px;
+    border-bottom: 2px solid var(--ink); vertical-align: bottom; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .num { font: 700 26px/1 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .num small { font: 500 13px var(--body); color: var(--muted); margin-left: 3px; }
+  .rank { width: 3.2em; }
+  .wk { width: 4em; }
+  .team { font-weight: 600; }
+  .who, .sub-kicker { display: block; font-size: 14px; color: var(--muted); }
+  .sub-kicker { display: none; }
+  button.pick { all: unset; cursor: pointer; font-weight: 600; text-decoration: underline;
+    text-decoration-color: var(--line); text-underline-offset: 3px; }
+  button.pick:hover { text-decoration-color: var(--ink); }
+  button.pick:focus-visible, select:focus-visible { outline: 3px solid var(--upright); outline-offset: 2px; }
+
+  /* The yard scale: 20 to 70 yards, a tick every 10. */
+  .yards { width: 34%; min-width: 220px; }
+  .scale { position: relative; height: 16px; font: 500 12px var(--body); color: var(--muted); }
+  .scale span { position: absolute; transform: translateX(-50%); }
+  .scale span:first-child { transform: none; }
+  .scale span:last-child { transform: translateX(-100%); }
+  .track { height: 14px; background:
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 20%), var(--paper); }
+  .bar { height: 100%; background: var(--turf); }
+  tr.lead .bar { background: var(--upright); }
+  tr.lead .rank { box-shadow: inset 5px 0 0 var(--upright); }
+
+  /* Managers who are not in the bet. */
+  tr.out td, tr.out .who, tr.out .num small { color: var(--out); }
+  tr.out .bar { background: var(--out); opacity: 0.55; }
+  tr.out { background: #F7F8F6; }
+  .tag { display: inline-block; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; margin-left: 6px; }
+
+  .note { color: var(--muted); font-size: 15px; margin: 10px 0 0; }
+  .picker { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .picker label { font-weight: 600; }
+  select { font: 500 17px var(--body); padding: 7px 10px; border: 1.5px solid var(--ink);
+    border-radius: 4px; background: var(--chalk); color: var(--ink); max-width: 100%; }
+  .status { color: var(--muted); }
+  tr.best td { background: #FFF6D6; }
+  tr.later td { color: var(--out); }
+  .empty { background: var(--chalk); padding: 28px; margin-top: 32px; border-left: 5px solid var(--upright); }
+  footer { color: var(--muted); font-size: 14px; margin: 36px 0 48px; }
+  footer a { color: inherit; }
+
+  @media (max-width: 680px) {
+    .yards, .kicker-col { display: none; }
+    .sub-kicker { display: block; }
+    th, td { padding: 9px 8px; }
+  }
+</style>
+</head>
+<body>
+<header class="field">
+  <div class="wrap">
+    <h1>Kicker Bet</h1>
+    {% if report %}
+    <p>{{ report.league }}, {{ report.season }} regular season, weeks {{ report.first_week }} to {{ report.last_week }}</p>
+    {% endif %}
+  </div>
+  <div class="hash"></div>
+</header>
+
+<main class="wrap">
+{% if not report %}
+  <div class="empty">
+    <strong>No data yet.</strong>
+    Connect Yahoo on the <a href="/admin">admin page</a> and the tables fill in after the first refresh.
+  </div>
+{% else %}
+  <section>
+    <h2>Longest field goal by manager</h2>
+    <table id="summary">
+      <thead>
+        <tr>
+          <th class="rank">Rank</th><th>Manager</th><th>Longest</th>
+          <th class="yards"><div class="scale" id="scale"></div></th>
+          <th class="kicker-col">Kicker</th><th class="wk">Week</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p class="note" id="summary-note"></p>
+  </section>
+
+  <section>
+    <h2>Week by week</h2>
+    <div class="picker">
+      <label for="manager">Manager</label>
+      <select id="manager"></select>
+    </div>
+    <table id="detail">
+      <thead><tr><th class="wk">Week</th><th>Kicker started</th><th>Longest field goal</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <footer>
+    <span id="updated"></span>
+    Starting kickers come from Yahoo. Distances come from nflverse play-by-play and count made field goals only.
+    <a href="/admin">Admin</a>
+  </footer>
+{% endif %}
+</main>
+
+{% if report %}
+<script>
+const REPORT = {{ report|tojson }};
+const LO = 20;
+const top_ = Math.max(0, ...REPORT.managers.map(m => m.longest || 0));
+const HI = Math.max(70, Math.ceil(top_ / 10) * 10);
+const pct = d => Math.max(2, Math.min(100, (d - LO) / (HI - LO) * 100));
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const label = m => m.manager ? `${m.team} (${m.manager})` : m.team;
+const STATUS = {
+  no_fg: "No field goal made", bye: "Bye week", pending: "Game not in the data yet",
+  unmatched: "Kicker not matched to NFL data", no_kicker: "No kicker started",
+  missing: "No lineup found", upcoming: ""
+};
+
+// Scale labels above the bars.
+const scale = document.getElementById("scale");
+for (let y = LO; y <= HI; y += 10) {
+  const s = el("span", "", y); s.style.left = (y - LO) / (HI - LO) * 100 + "%"; scale.append(s);
+}
+
+// Summary.
+const sBody = document.querySelector("#summary tbody");
+const best = Math.max(0, ...REPORT.managers.filter(m => m.in_bet).map(m => m.longest || 0));
+for (const m of REPORT.managers) {
+  const tr = el("tr", [m.in_bet ? "" : "out", m.in_bet && m.longest && m.longest === best ? "lead" : ""].join(" ").trim());
+  tr.append(el("td", "rank num", m.rank ?? "–"));
+  const who = el("td");
+  const pick = el("button", "pick", m.team); pick.type = "button";
+  pick.addEventListener("click", () => { select.value = m.id; showDetail(); document.getElementById("detail").scrollIntoView({behavior: "smooth", block: "nearest"}); });
+  who.append(pick);
+  if (!m.in_bet) who.append(el("span", "tag", "Not in the bet"));
+  if (m.manager) who.append(el("span", "who", m.manager));
+  if (m.kicker) who.append(el("span", "sub-kicker", m.kicker));
+  tr.append(who);
+  const num = el("td", "num", m.longest ?? "–"); if (m.longest) num.append(el("small", "", "yd")); tr.append(num);
+  const yards = el("td", "yards"); const track = el("div", "track");
+  if (m.longest) { const bar = el("div", "bar"); bar.style.width = pct(m.longest) + "%"; track.append(bar); }
+  yards.append(track); tr.append(yards);
+  tr.append(el("td", "kicker-col", m.kicker ?? "–"));
+  tr.append(el("td", "wk", m.week ?? "–"));
+  sBody.append(tr);
+}
+const anyOut = REPORT.managers.some(m => !m.in_bet);
+document.getElementById("summary-note").textContent =
+  (anyOut ? "Greyed-out managers are not in the bet and are not ranked. " : "") + "Ties share a rank.";
+
+// Detail.
+const select = document.getElementById("manager");
+const byName = [...REPORT.managers].sort((a, b) => label(a).localeCompare(label(b)));
+const groups = [["In the bet", byName.filter(m => m.in_bet)], ["Not in the bet", byName.filter(m => !m.in_bet)]];
+for (const [name, list] of groups) {
+  if (!list.length) continue;
+  const parent = anyOut ? Object.assign(el("optgroup"), {label: name}) : select;
+  for (const m of list) { const o = el("option", "", label(m)); o.value = m.id; parent.append(o); }
+  if (anyOut) select.append(parent);
+}
+const dBody = document.querySelector("#detail tbody");
+function showDetail() {
+  const m = REPORT.managers.find(x => x.id === select.value); if (!m) return;
+  dBody.replaceChildren();
+  for (const w of m.weeks) {
+    const tr = el("tr", w.status === "upcoming" ? "later" : (w.longest && w.week === m.week ? "best" : ""));
+    tr.append(el("td", "wk num", w.week));
+    tr.append(el("td", "", w.kicker ?? (w.status === "upcoming" ? "" : "–")));
+    const td = el("td");
+    if (w.longest) { const n = el("span", "num", w.longest); n.append(el("small", "", "yd")); td.append(n);
+      if (w.week === m.week) td.append(el("span", "tag", "Season long")); }
+    else td.append(el("span", "status", STATUS[w.status] ?? ""));
+    tr.append(td); dBody.append(tr);
+  }
+}
+select.addEventListener("change", showDetail);
+const first = REPORT.managers.find(m => m.in_bet) || REPORT.managers[0];
+if (first) { select.value = first.id; showDetail(); }
+
+if (REPORT.updated) {
+  const when = new Date(REPORT.updated).toLocaleString([], {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"});
+  document.getElementById("updated").textContent = `Updated ${when}. `;
+}
+</script>
+{% endif %}
+</body>
+</html>
