@@ -2,14 +2,15 @@
 
 One page for the league's kicker bet:
 
-1. **Longest field goal by manager** for the regular season, with the kicker and week.
+1. **Longest field goal by manager** for the season, fantasy playoffs included, with the kicker and week.
 2. **Week by week** for any manager: the kicker they started and that kicker's longest field goal.
 
 Lineups come from Yahoo (read-only). Distances come from nflverse play-by-play.
 
 ## Rules the app applies
 
-- Regular season only. The app stops the week before Yahoo says playoffs start (week 14 for this league).
+- The regular season and the fantasy playoffs both count, through the league's last week (week 17
+  for this league). Every manager's playoff-week kicker counts, whether or not their team is still alive.
 - The kicker in the K slot counts. Kickers on the bench do not.
 - Made field goals only. Misses and blocks are ignored.
 - Managers not in the bet stay on the page greyed out, and are not ranked.
@@ -69,4 +70,4 @@ that could not be matched to NFL data. `fly logs` has the full detail.
 | `YAHOO_REDIRECT_URI` | https://localhost:8080 | Must match the Yahoo app exactly |
 | `REFRESH_HOURS` | 6 | Hours between automatic refreshes |
 | `NOT_IN_BET` | Jen,Mike,Stephen,Alicia | Starting list of managers to grey out |
-| `LAST_REGULAR_SEASON_WEEK` | 14 | Used only if Yahoo does not report the playoff start |
+| `LAST_WEEK` | 17 | Used only if Yahoo does not report the league's last week |

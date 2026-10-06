@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for fantasyfootball-5syxsq on 2026-10-06T15:02:45Z
+# fly.toml app configuration file for kicker-bet
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'fantasyfootball-5syxsq'
+app = 'kicker-bet'
 primary_region = 'ewr'
 
 [build]
