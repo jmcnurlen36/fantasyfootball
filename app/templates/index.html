@@ -51,8 +51,9 @@
   .track { height: 14px; background:
     repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 20%), var(--paper); }
   .bar { height: 100%; background: var(--turf); }
-  tr.lead .bar { background: var(--upright); }
-  tr.lead .rank { box-shadow: inset 5px 0 0 var(--upright); }
+  /* Last place in the bet. */
+  tr.last .bar { background: var(--upright); }
+  tr.last .rank { box-shadow: inset 5px 0 0 var(--upright); }
 
   /* Managers who are not in the bet. */
   tr.out td, tr.out .who, tr.out .num small { color: var(--out); }
@@ -158,9 +159,13 @@ for (let y = LO; y <= HI; y += 10) {
 
 // Summary.
 const sBody = document.querySelector("#summary tbody");
-const best = Math.max(0, ...REPORT.managers.filter(m => m.in_bet).map(m => m.longest || 0));
+// Last place: the shortest season-long kick among managers in the bet. Anyone in the bet
+// without a made field goal yet counts as zero yards. Ties for last are all highlighted.
+const inBet = REPORT.managers.filter(m => m.in_bet);
+const anyKicks = inBet.some(m => m.longest);
+const worst = Math.min(...inBet.map(m => m.longest || 0));
 for (const m of REPORT.managers) {
-  const tr = el("tr", [m.in_bet ? "" : "out", m.in_bet && m.longest && m.longest === best ? "lead" : ""].join(" ").trim());
+  const tr = el("tr", [m.in_bet ? "" : "out", m.in_bet && anyKicks && (m.longest || 0) === worst ? "last" : ""].join(" ").trim());
   tr.append(el("td", "rank num", m.rank ?? "–"));
   const who = el("td");
   const pick = el("button", "pick", m.team); pick.type = "button";
