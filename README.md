@@ -29,6 +29,15 @@ fly deploy --ha=false
 
 If the name `kicker-bet` is taken, pick another and use it in place of `kicker-bet` below.
 
+## Deploy from GitHub
+
+Once set up, every merge to `main` deploys the app, and the **Actions** tab has a
+**Run workflow** button for deploying on demand.
+
+1. On your laptop, create a deploy token: `fly tokens create deploy -x 999999h -a kicker-bet`
+2. In the GitHub repo, go to **Settings > Secrets and variables > Actions > New repository secret**.
+   Name it `FLY_API_TOKEN` and paste the whole token, including the `FlyV1` at the start.
+
 ## Connect Yahoo (once)
 
 1. Open `https://kicker-bet.fly.dev/admin`. Username can be anything; the password is your `ADMIN_PASSWORD`.
